@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TMNT - Combate de Gato en las Alcantarillas</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts para estilo Comic/Arcade -->
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Permanent+Marker&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <!-- Tone.js para efectos de sonido retro -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <!-- FontAwesome para iconos ninja adicionales -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0b0f19;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(34, 197, 94, 0.15) 0, transparent 50%), 
+                radial-gradient(at 100% 100%, rgba(168, 85, 247, 0.1) 0, transparent 50%);
+        }
+        .font-comic {
+            font-family: 'Bangers', cursive;
+            letter-spacing: 0.05em;
+        }
+        .font-marker {
+            font-family: 'Permanent Marker', cursive;
+        }
+        /* Efecto de brillo de neón Ooze */
+        .neon-glow-green {
+            box-shadow: 0 0 15px rgba(34, 197, 94, 0.6);
+            text-shadow: 0 0 8px rgba(34, 197, 94, 0.8);
+        }
+        .neon-border-green {
+            border-color: rgba(34, 197, 94, 0.8);
+            box-shadow: inset 0 0 10px rgba(34, 197, 94, 0.3), 0 0 15px rgba(34, 197, 94, 0.4);
+        }
+        .neon-border-purple {
+            border-color: rgba(168, 85, 247, 0.8);
+            box-shadow: inset 0 0 10px rgba(168, 85, 247, 0.3), 0 0 15px rgba(168, 85, 247, 0.4);
+        }
+        /* Animaciones para la marca */
+        @keyframes slash {
+            0% { transform: scale(0) rotate(-45deg); opacity: 0; }
+            50% { transform: scale(1.2) rotate(15deg); opacity: 0.9; }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+        .slash-animation {
+            animation: slash 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        @keyframes ooze-flow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .ooze-gradient {
+            background: linear-gradient(270deg, #15803d, #22c55e, #166534);
+            background-size: 600% 600%;
+            animation: ooze-flow 8s ease infinite;
+        }
+        /* Ocultar barra de desplazamiento */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="text-gray-100 min-h-screen flex flex-col justify-between overflow-x-hidden">
+
+    <header class="w-full bg-slate-900 border-b-4 border-green-500 py-3 px-4 shadow-lg sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
+            <!-- Título de Combate -->
+            <div class="flex items-center gap-3">
+                <div class="bg-green-600 p-2 rounded-full border-2 border-white animate-bounce">
+                    <svg class="w-8 h-8 text-white" viewBox="0 0 100 100" fill="currentColor">
+                        <!-- Casco/Caparazón Simple -->
+                        <path d="M50 15C30 15 15 30 15 50C15 65 25 78 40 83C42 84 45 85 50 85C55 85 58 84 60 83C75 78 85 65 85 50C85 30 70 15 50 15ZM30 40H70V48H30V40Z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-3xl sm:text-4xl font-comic text-green-400 tracking-wider neon-glow-green">COMBATE DE GATO</h1>
+                    <p class="text-xs uppercase tracking-widest text-purple-400 font-bold">Mutant Sewer Edition</p>
+                </div>
+            </div>
+
+            <!-- Controles de Audio y Menú -->
+            <div class="flex items-center gap-4">
+                <button id="sound-toggle" onclick="toggleSound()" class="bg-slate-800 hover:bg-slate-700 text-yellow-400 p-2.5 rounded-lg border-2 border-slate-600 flex items-center gap-2 transition duration-200">
+                    <i id="sound-icon" class="fa-solid fa-volume-high"></i>
+                    <span class="text-xs font-bold hidden md:inline">SONIDO: ON</span>
+                </button>
+                <div class="bg-slate-800 px-3 py-1.5 rounded-lg border-2 border-slate-600 flex items-center gap-2">
+                    <span class="text-xs font-bold text-gray-400">MODO:</span>
+                    <span id="game-mode-indicator" class="text-xs font-comic text-yellow-400 tracking-wider">JUGADOR VS CPU</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-6xl w-full mx-auto p-4 flex flex-col items-center justify-center gap-6">
+
+        <!-- CONTENEDOR DE PANTALLA: SELECCIÓN DE PERSONAJE -->
+        <div id="screen-character-select" class="w-full max-w-4xl bg-slate-900/90 border-4 border-purple-600 rounded-3xl p-6 shadow-2xl backdrop-blur-md">
+            <div class="text-center mb-6">
+                <span class="text-sm uppercase tracking-widest text-green-400 font-extrabold bg-green-950/80 px-4 py-1.5 rounded-full border border-green-800">Fase de Reclutamiento</span>
+                <h2 class="text-3xl sm:text-4xl font-comic text-yellow-400 tracking-wider mt-2">¡ELIGE A TUS GUERREROS!</h2>
+                <p class="text-gray-300 text-sm mt-1 max-w-md mx-auto">Selecciona tu tortuga mutante favorita para el combate o ponte en la piel de sus maestros y enemigos.</p>
+            </div>
+
+            <!-- Ajuste del Modo de Juego antes de Elegir -->
+            <div class="flex flex-col sm:flex-row justify-center items-center gap-4 mb-8 bg-slate-950 p-4 rounded-2xl border-2 border-slate-800">
+                <div class="flex flex-col items-center sm:items-start">
+                    <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Configuración de Combate</span>
+                    <span class="text-sm font-semibold text-white">Elige la modalidad para iniciar</span>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <button id="btn-mode-pve" onclick="selectGameMode('pve')" class="px-4 py-2 rounded-xl font-comic text-md border-2 bg-purple-600 border-purple-400 text-white transition-all transform hover:scale-105 shadow-md">
+                        <i class="fa-solid fa-robot mr-2"></i>VS CPU
+                    </button>
+                    <button id="btn-mode-pvp" onclick="selectGameMode('pvp')" class="px-4 py-2 rounded-xl font-comic text-md border-2 bg-slate-800 border-slate-700 text-gray-400 transition-all transform hover:scale-105">
+                        <i class="fa-solid fa-users mr-2"></i>VS JUGADOR
+                    </button>
+                </div>
+                <!-- Selección de Dificultad (Visible solo en modo PvE) -->
+                <div id="difficulty-selector" class="flex gap-1 bg-slate-900 p-1 rounded-lg border border-slate-700">
+                    <button onclick="setDifficulty('easy')" id="diff-easy" class="px-2.5 py-1 text-xs rounded font-bold transition-all bg-green-600 text-white">FÁCIL</button>
+                    <button onclick="setDifficulty('medium')" id="diff-medium" class="px-2.5 py-1 text-xs rounded font-bold transition-all text-gray-400 hover:text-white">MEDIO</button>
+                    <button onclick="setDifficulty('hard')" id="diff-hard" class="px-2.5 py-1 text-xs rounded font-bold transition-all text-gray-400 hover:text-white">IMBATIBLE</button>
+                </div>
+            </div>
+
+            <!-- Rejilla de Personajes -->
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+                <!-- Se poblará dinámicamente mediante JS -->
+                <div id="character-grid" class="contents"></div>
+            </div>
+
+            <!-- Panel de Turnos Actuales / Confirmación -->
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4 bg-slate-950 p-4 rounded-2xl border-2 border-slate-800">
+                <div class="flex items-center gap-4">
+                    <!-- Jugador 1 Info -->
+                    <div class="flex items-center gap-3">
+                        <div id="p1-preview-color" class="w-4 h-12 bg-blue-500 rounded-full"></div>
+                        <div>
+                            <p class="text-xs text-blue-400 font-bold uppercase tracking-wider">JUGADOR 1 (X)</p>
+                            <p id="p1-preview-name" class="font-comic text-lg text-white">LEONARDO</p>
+                        </div>
+                    </div>
+                    <div class="text-xl text-gray-500 font-comic">VS</div>
+                    <!-- Jugador 2 Info -->
+                    <div class="flex items-center gap-3">
+                        <div id="p2-preview-color" class="w-4 h-12 bg-red-500 rounded-full"></div>
+                        <div>
+                            <p id="p2-preview-title" class="text-xs text-red-400 font-bold uppercase tracking-wider">CPU (O)</p>
+                            <p id="p2-preview-name" class="font-comic text-lg text-white">RAPHAEL</p>
+                        </div>
+                    </div>
+                </div>
+                <button onclick="startGame()" class="w-full md:w-auto ooze-gradient text-white font-comic text-2xl px-12 py-3 rounded-xl border-t-2 border-green-300 shadow-lg shadow-green-950/50 hover:brightness-110 active:scale-95 transform transition-all tracking-widest">
+                    ¡EMPEZAR ENCUENTRO!
+                </button>
+            </div>
+        </div>
+
+        <!-- CONTENEDOR DE PANTALLA: ARENA DE JUEGO -->
+        <div id="screen-game" class="w-full flex flex-col lg:flex-row gap-6 hidden">
+            
+            <!-- Panel Lateral Izquierdo: Info de Combatientes -->
+            <div class="w-full lg:w-1/3 flex flex-col gap-4">
+                <!-- Tarjeta de Marcadores -->
+                <div class="bg-slate-900 border-4 border-slate-700 rounded-3xl p-5 shadow-xl relative overflow-hidden">
+                    <div class="absolute top-0 right-0 left-0 h-1 bg-yellow-500"></div>
+                    <h3 class="font-comic text-xl text-yellow-400 tracking-wider mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-trophy text-yellow-500"></i> MARCADOR DE COMBATE
+                    </h3>
+                    
+                    <div class="flex flex-col gap-3">
+                        <!-- Score Jugador 1 -->
+                        <div id="p1-score-card" class="flex justify-between items-center bg-slate-950 p-3 rounded-xl border-l-4 border-blue-500 transition-all duration-300">
+                            <div class="flex items-center gap-2.5">
+                                <div id="p1-score-avatar" class="w-8 h-8 rounded-full flex items-center justify-center"></div>
+                                <div>
+                                    <p id="p1-score-name" class="font-comic text-sm tracking-wide text-white">Leonardo</p>
+                                    <p class="text-[10px] text-gray-400 uppercase font-bold">Jugador 1</p>
+                                </div>
+                            </div>
+                            <span id="p1-wins" class="font-comic text-3xl text-blue-400">0</span>
+                        </div>
+
+                        <!-- Empates -->
+                        <div class="flex justify-between items-center bg-slate-950 p-3 rounded-xl border-l-4 border-gray-500">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-gray-400">
+                                    <i class="fa-solid fa-handshake"></i>
+                                </div>
+                                <div>
+                                    <p class="font-comic text-sm tracking-wide text-white">Empates</p>
+                                    <p class="text-[10px] text-gray-400 uppercase font-bold">Tregua</p>
+                                </div>
+                            </div>
+                            <span id="tie-wins" class="font-comic text-3xl text-gray-400">0</span>
+                        </div>
+
+                        <!-- Score Jugador 2 / CPU -->
+                        <div id="p2-score-card" class="flex justify-between items-center bg-slate-950 p-3 rounded-xl border-l-4 border-red-500 transition-all duration-300">
+                            <div class="flex items-center gap-2.5">
+                                <div id="p2-score-avatar" class="w-8 h-8 rounded-full flex items-center justify-center"></div>
+                                <div>
+                                    <p id="p2-score-name" class="font-comic text-sm tracking-wide text-white">Raphael</p>
+                                    <p id="p2-score-label" class="text-[10px] text-gray-400 uppercase font-bold">Jugador 2</p>
+                                </div>
+                            </div>
+                            <span id="p2-wins" class="font-comic text-3xl text-red-400">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tarjeta de Controles Rápidos -->
+                <div class="bg-slate-900 border-4 border-slate-700 rounded-3xl p-5 shadow-xl">
+                    <h3 class="font-comic text-xl text-purple-400 tracking-wider mb-3">TÁCTICAS</h3>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="resetCurrentGame()" class="bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 px-3 rounded-xl border border-slate-600 flex flex-col items-center justify-center text-center transition-all">
+                            <i class="fa-solid fa-arrow-rotate-left mb-1 text-yellow-500"></i>
+                            <span class="text-xs">Reiniciar</span>
+                        </button>
+                        <button onclick="goToCharacterSelect()" class="bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 px-3 rounded-xl border border-slate-600 flex flex-col items-center justify-center text-center transition-all">
+                            <i class="fa-solid fa-user-ninja mb-1 text-green-500"></i>
+                            <span class="text-xs">Personajes</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel Central: El Tablero de Juego (Gato) -->
+            <div class="w-full lg:w-2/3 flex flex-col items-center justify-center bg-slate-900 border-4 border-green-500 rounded-3xl p-4 sm:p-6 shadow-xl relative overflow-hidden">
+                <!-- Tubos de neón decorativos de alcantarilla -->
+                <div class="absolute -top-10 -left-10 w-24 h-24 border-8 border-green-950 rounded-full opacity-30"></div>
+                <div class="absolute -bottom-10 -right-10 w-32 h-32 border-8 border-green-950 rounded-full opacity-30"></div>
+
+                <!-- Estado del Turno Actual -->
+                <div class="w-full text-center mb-4 z-10">
+                    <div class="inline-block bg-slate-950 border border-slate-800 px-6 py-2 rounded-full shadow-inner">
+                        <span class="text-xs text-gray-400 font-bold uppercase tracking-widest block">Turno de Combate</span>
+                        <div class="flex items-center justify-center gap-2 mt-0.5">
+                            <div id="current-player-indicator-color" class="w-3.5 h-3.5 rounded-full bg-blue-500"></div>
+                            <span id="turn-announcer" class="font-comic text-lg text-white tracking-wider">Cargando...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- El Tablero de Gato -->
+                <div class="grid grid-cols-3 gap-3 w-full max-w-[420px] aspect-square bg-slate-950 p-3.5 rounded-2xl border-4 border-slate-800 relative shadow-2xl z-10">
+                    <!-- Cada una de las 9 casillas -->
+                    <button onclick="cellClicked(0)" id="cell-0" class="bg-slate-900 hover:bg-slate-800/80 rounded-xl border border-slate-800 text-white font-bold flex items-center justify-center transition-all transform hover:scale-[1.02] active:scale-95 aspect-square relative focus:outline-none"></button>
+                    <button onclick="cellClicked(1)" id="cell-1" class="bg-slate-900 hover:bg-slate-800/80 rounded-xl border border-slate-800 text-white font-bold flex items-center justify-center transition-all transform hover:scale-[1.02] active:scale-95 aspect-square relative focus:outline-none"></button>
+                    <button onclick="cellClicked(2)" id="cell-2" class="bg-slate-900 hover:bg-slate-800/80 rounded-xl border border-slate-800 text-white font-bold flex items-center justify-center transition-all transform hover:scale-[1.02] active:scale-95 aspect-square relative focus:outline-none"></button>
+                    <button onclick="cellClicked(3)" id="cell-3" class="bg-slate-900 hover:bg-slate-800/80 rounded-xl border border-slate-800 text-white font-bold flex items-center justify-center transition-all transform hover:scale-[1.02] active:scale-95 aspect-square relative focus:outline-none"></button>
+                    <button onclick="cellClicked(4)" id="cell-4" class="bg-slate-900 hover:bg-slate-800/80 rounded-xl border border-slate-800 text-white font-bold flex items-center justify-center transition-all transform hover:scale-[1.02] active:scale-95 aspect-square relative focus:outline-none"></button>
+                    <button onclick="cellClicked(5)" id="cell-5" class="bg-slate-900 hover:bg-slate-800/80 rounded-xl border border-slate-800 text-white font-bold flex items-center justify-center transition-all transform hover:scale-[1.02] active:scale-95 aspect-square relative focus:outline-none"></button>
+                    <button onclick="cellClicked(6)" id="cell-6" class="bg-slate-900 hover:bg-slate-800/80 rounded-xl border border-slate-800 text-white font-bold flex items-center justify-center transition-all transform hover:scale-[1.02] active:scale-95 aspect-square relative focus:outline-none"></button>
+                    <button onclick="cellClicked(7)" id="cell-7" class="bg-slate-900 hover:bg-slate-800/80 rounded-xl border border-slate-800 text-white font-bold flex items-center justify-center transition-all transform hover:scale-[1.02] active:scale-95 aspect-square relative focus:outline-none"></button>
+                    <button onclick="cellClicked(8)" id="cell-8" class="bg-slate-900 hover:bg-slate-800/80 rounded-xl border border-slate-800 text-white font-bold flex items-center justify-center transition-all transform hover:scale-[1.02] active:scale-95 aspect-square relative focus:outline-none"></button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Seccion de Leaderboard de Alcantarilla (Global) -->
+    <section class="max-w-6xl w-full mx-auto px-4 pb-8">
+        <div class="bg-slate-900 border-4 border-green-500 rounded-3xl p-5 shadow-xl">
+            <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-2">
+                <div class="flex items-center gap-2">
+                    <span class="text-2xl text-yellow-400"><i class="fa-solid fa-ranking-star"></i></span>
+                    <h3 class="font-comic text-2xl text-yellow-400 tracking-wider">RANKING DE LA ALCANTARILLA</h3>
+                </div>
+                <button onclick="resetGlobalLeaderboard()" class="text-xs text-red-400 hover:text-red-300 font-bold bg-red-950/40 border border-red-900 px-3 py-1 rounded-lg transition">
+                    Limpiar Clasificación
+                </button>
+            </div>
+            
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3" id="leaderboard-container">
+                <!-- Se llenará mediante JS -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Modal de Resultados / Fin del Juego -->
+    <div id="modal-gameover" class="fixed inset-0 bg-slate-950/90 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border-4 border-green-500 rounded-3xl max-w-md w-full p-6 text-center shadow-2xl relative overflow-hidden">
+            <!-- Caparazón de fondo -->
+            <div class="absolute -top-12 -right-12 w-32 h-32 text-slate-800 opacity-20 transform rotate-12">
+                <i class="fa-solid fa-shield-halved text-[120px]"></i>
+            </div>
+
+            <div id="winner-banner-bg" class="ooze-gradient -mx-6 -mt-6 p-4 border-b-4 border-green-400 mb-6 flex flex-col items-center">
+                <span id="gameover-title" class="font-comic text-white text-3xl tracking-widest uppercase">¡VICTORIA TOTAL!</span>
+                <span id="gameover-subtitle" class="text-xs font-bold text-yellow-300 tracking-widest uppercase mt-1">El Clan del Pie ha sido derrotado</span>
+            </div>
+
+            <!-- Avatar del ganador/empate -->
+            <div class="flex justify-center mb-4">
+                <div id="gameover-avatar-container" class="w-24 h-24 rounded-full border-4 border-white flex items-center justify-center shadow-lg transform scale-110">
+                    <!-- SVG dinámico del ganador -->
+                </div>
+            </div>
+
+            <h4 id="gameover-winner-name" class="font-comic text-2xl text-yellow-400 tracking-wide mb-2">Michelangelo</h4>
+            <p id="gameover-msg" class="text-gray-300 text-sm mb-6 px-4">¡Un maestro ninja del Caparazón siempre domina el tablero con agilidad y destreza!</p>
+
+            <div class="flex flex-col gap-2">
+                <button onclick="restartMatch()" class="w-full ooze-gradient text-white font-comic text-xl py-3 rounded-xl border-t-2 border-green-300 shadow-md hover:brightness-110 transition-all">
+                    ¡OTRO COMBATE!
+                </button>
+                <button onclick="goToCharacterSelectFromModal()" class="w-full bg-slate-800 hover:bg-slate-700 text-gray-300 font-comic text-md py-2.5 rounded-xl border border-slate-600 transition-all">
+                    CAMBIAR PERSONAJES
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pie de página de Arcade Retro -->
+    <footer class="w-full bg-slate-950 py-3 text-center border-t-2 border-slate-800">
+        <p class="text-xs text-gray-500 font-semibold tracking-wider">
+            TMNT NEON SLAMMER &copy; 2026 &bull; HECHO PARA LOS FANS DE LAS TORTUGAS NINJA
+        </p>
+    </footer>
+
+    <script>
+        // Datos de las Tortugas y Villanos con sus colores, iconos y descripciones
+        const CHARACTERS = [
+            {
+                id: 'leo',
+                name: 'LEONARDO',
+                color: '#3b82f6', // Azul
+                accentColor: 'bg-blue-600',
+                borderColor: 'border-blue-500',
+                glowColor: 'rgba(59, 130, 246, 0.4)',
+                weapon: 'Katanas Gemelas',
+                icon: 'fa-sword',
+                quote: '¡Sigan al líder!',
+                isVillain: false,
+                avatarSvg: `<svg viewBox="0 0 100 100" class="w-full h-full">
+                    <circle cx="50" cy="50" r="45" fill="#22c55e" />
+                    <!-- Máscara Leo -->
+                    <rect x="5" y="32" width="90" height="20" rx="4" fill="#3b82f6" />
+                    <circle cx="35" cy="42" r="8" fill="white" />
+                    <circle cx="35" cy="42" r="4" fill="black" />
+                    <circle cx="65" cy="42" r="8" fill="white" />
+                    <circle cx="65" cy="42" r="4" fill="black" />
+                    <!-- Nudos máscara -->
+                    <path d="M5 32 L2 25 L8 28 Z" fill="#1d4ed8" />
+                    <path d="M5 45 L0 52 L8 48 Z" fill="#1d4ed8" />
+                    <!-- Sonrisa -->
+                    <path d="M35 70 Q50 80 65 70" stroke="black" stroke-width="4" stroke-linecap="round" fill="none" />
+                </svg>`
+            },
+            {
+                id: 'raph',
+                name: 'RAPHAEL',
+                color: '#ef4444', // Rojo
+                accentColor: 'bg-red-600',
+                borderColor: 'border-red-500',
+                glowColor: 'rgba(239, 68, 68, 0.4)',
+                weapon: 'Tridentes Sai',
+                icon: 'fa-wand-magic', // Aproximado para Sai
+                quote: '¡Menos charla, más golpes!',
+                isVillain: false,
+                avatarSvg: `<svg viewBox="0 0 100 100" class="w-full h-full">
+                    <circle cx="50" cy="50" r="45" fill="#15803d" />
+                    <!-- Máscara Raph -->
+                    <rect x="5" y="32" width="90" height="20" rx="4" fill="#ef4444" />
+                    <circle cx="35" cy="42" r="8" fill="white" />
+                    <circle cx="35" cy="42" r="4" fill="black" />
+                    <circle cx="65" cy="42" r="8" fill="white" />
+                    <circle cx="65" cy="42" r="4" fill="black" />
+                    <!-- Cejas enojadas -->
+                    <path d="M25 30 L45 38" stroke="black" stroke-width="3" stroke-linecap="round" />
+                    <path d="M75 30 L55 38" stroke="black" stroke-width="3" stroke-linecap="round" />
+                    <!-- Sonrisa ruda -->
+                    <path d="M38 72 Q50 64 62 72" stroke="black" stroke-width="4" stroke-linecap="round" fill="none" />
+                </svg>`
+            },
+            {
+                id: 'mikey',
+                name: 'MICHELANGELO',
+                color: '#f97316', // Naranja
+                accentColor: 'bg-orange-600',
+                borderColor: 'border-orange-500',
+                glowColor: 'rgba(249, 115, 22, 0.4)',
+                weapon: 'Nunchakus',
+                icon: 'fa-pizza-slice',
+                quote: '¡Cowabunga! ¡Pizza Time!',
+                isVillain: false,
+                avatarSvg: `<svg viewBox="0 0 100 100" class="w-full h-full">
+                    <circle cx="50" cy="50" r="45" fill="#4ade80" />
+                    <!-- Máscara Mikey -->
+                    <rect x="5" y="32" width="90" height="20" rx="4" fill="#f97316" />
+                    <circle cx="35" cy="42" r="8" fill="white" />
+                    <circle cx="35" cy="42" r="4" fill="black" />
+                    <circle cx="65" cy="42" r="8" fill="white" />
+                    <circle cx="65" cy="42" r="4" fill="black" />
+                    <!-- Sonrisa gigante -->
+                    <path d="M30 65 Q50 85 70 65 Z" fill="#991b1b" stroke="black" stroke-width="3" />
+                    <path d="M38 67 Q50 72 62 67" stroke="white" stroke-width="4" stroke-linecap="round" fill="none" />
+                </svg>`
+            },
+            {
+                id: 'donnie',
+                name: 'DONATELLO',
+                color: '#a855f7', // Purpura
+                accentColor: 'bg-purple-600',
+                borderColor: 'border-purple-500',
+                glowColor: 'rgba(168, 85, 247, 0.4)',
+                weapon: 'Bastón Bō',
+                icon: 'fa-gears',
+                quote: 'La probabilidad de ganar es 99%.',
+                isVillain: false,
+                avatarSvg: `<svg viewBox="0 0 100 100" class="w-full h-full">
+                    <circle cx="50" cy="50" r="45" fill="#16a34a" />
+                    <!-- Máscara Donnie -->
+                    <rect x="5" y="32" width="90" height="20" rx="4" fill="#a855f7" />
+                    <circle cx="35" cy="42" r="8" fill="white" />
+                    <circle cx="35" cy="42" r="4" fill="black" />
+                    <circle cx="65" cy="42" r="8" fill="white" />
+                    <circle cx="65" cy="42" r="4" fill="black" />
+                    <!-- Gafas de inventor arriba -->
+                    <rect x="30" y="10" width="16" height="12" rx="2" fill="#475569" stroke="black" stroke-width="2"/>
+                    <rect x="54" y="10" width="16" height="12" rx="2" fill="#475569" stroke="black" stroke-width="2"/>
+                    <line x1="46" y1="16" x2="54" y2="16" stroke="black" stroke-width="2" />
+                    <!-- Sonrisa pensativa -->
+                    <path d="M35 68 H65" stroke="black" stroke-width="4" stroke-linecap="round" />
+                </svg>`
+            },
+            {
+                id: 'splinter',
+                name: 'SPLINTER',
+                color: '#b45309', // Marrón
+                accentColor: 'bg-amber-700',
+                borderColor: 'border-amber-600',
+                glowColor: 'rgba(180, 83, 9, 0.4)',
+                weapon: 'Bastón y Sabiduría',
+                icon: 'fa-yin-yang',
+                quote: 'El verdadero poder viene de adentro.',
+                isVillain: false,
+                avatarSvg: `<svg viewBox="0 0 100 100" class="w-full h-full">
+                    <circle cx="50" cy="50" r="45" fill="#78350f" />
+                    <!-- Hocico -->
+                    <path d="M50 35 L30 65 H70 Z" fill="#d97706" />
+                    <!-- Nariz rosa -->
+                    <polygon points="45,65 55,65 50,72" fill="#f43f5e" />
+                    <!-- Ojos blancos serios -->
+                    <circle cx="35" cy="45" r="5" fill="white" />
+                    <circle cx="35" cy="45" r="2" fill="black" />
+                    <circle cx="65" cy="45" r="5" fill="white" />
+                    <circle cx="65" cy="45" r="2" fill="black" />
+                    <!-- Cejas blancas de anciano -->
+                    <path d="M28 35 Q35 30 42 38" stroke="white" stroke-width="4" stroke-linecap="round" fill="none" />
+                    <path d="M72 35 Q65 30 58 38" stroke="white" stroke-width="4" stroke-linecap="round" fill="none" />
+                    <!-- Bigotes -->
+                    <line x1="25" y1="62" x2="10" y2="60" stroke="#f59e0b" stroke-width="2" />
+                    <line x1="25" y1="67" x2="8" y2="72" stroke="#f59e0b" stroke-width="2" />
+                    <line x1="75" y1="62" x2="90" y2="60" stroke="#f59e0b" stroke-width="2" />
+                    <line x1="75" y1="67" x2="92" y2="72" stroke="#f59e0b" stroke-width="2" />
+                </svg>`
+            },
+            {
+                id: 'shredder',
+                name: 'SHREDDER',
+                color: '#64748b', // Plateado / Gris oscuro
+                accentColor: 'bg-slate-700',
+                borderColor: 'border-purple-600',
+                glowColor: 'rgba(168, 85, 247, 0.5)',
+                weapon: 'Garras de Acero',
+                icon: 'fa-skull-crossbones',
+                quote: '¡Esta noche ceno sopa de tortuga!',
+                isVillain: true,
+                avatarSvg: `<svg viewBox="0 0 100 100" class="w-full h-full">
+                    <circle cx="50" cy="50" r="45" fill="#1e1b4b" />
+                    <!-- Casco de Shredder plateado -->
+                    <path d="M50 8 L15 35 L20 85 L50 95 L80 85 L85 35 Z" fill="#94a3b8" />
+                    <!-- Detalles del casco (cuchillas laterales y picos) -->
+                    <path d="M50 8 L40 28 H60 Z" fill="#cbd5e1" />
+                    <!-- Apertura para los ojos -->
+                    <polygon points="28,45 72,45 68,60 32,60" fill="#000000" />
+                    <!-- Ojos rojos brillantes -->
+                    <ellipse cx="38" cy="52" rx="6" ry="3" fill="#ef4444" />
+                    <ellipse cx="62" cy="52" rx="6" ry="3" fill="#ef4444" />
+                    <!-- Protector de boca de rejilla metálica -->
+                    <path d="M35 68 L50 85 L65 68" stroke="#475569" stroke-width="4" stroke-linecap="round" fill="none" />
+                    <line x1="50" y1="68" x2="50" y2="85" stroke="#475569" stroke-width="3" />
+                </svg>`
+            }
+        ];
+
+        // Inicializador de música y sonidos retro
+        let audioEnabled = true;
+        let synth = null;
+
+        function initAudio() {
+            if (!synth) {
+                // Creamos un sintetizador retro arcade simple
+                synth = new Tone.Synth({
+                    oscillator: { type: "square" },
+                    envelope: { attack: 0.01, decay: 0.1, sustain: 0.2, release: 0.1 }
+                }).toDestination();
+            }
+        }
+
+        function playSound(type) {
+            if (!audioEnabled) return;
+            try {
+                initAudio();
+                const now = Tone.now();
+                
+                if (type === 'select') {
+                    // Tono rápido ascendente
+                    synth.triggerAttackRelease("E5", "16n", now);
+                } else if (type === 'hit1') {
+                    // Golpe ninja agudo
+                    synth.triggerAttackRelease("A4", "16n", now);
+                } else if (type === 'hit2') {
+                    // Golpe ninja grave
+                    synth.triggerAttackRelease("D4", "16n", now);
+                } else if (type === 'win') {
+                    // Fanfarria feliz victoriosa
+                    synth.triggerAttackRelease("C5", "8n", now);
+                    synth.triggerAttackRelease("E5", "8n", now + 0.1);
+                    synth.triggerAttackRelease("G5", "8n", now + 0.2);
+                    synth.triggerAttackRelease("C6", "4n", now + 0.3);
+                } else if (type === 'tie') {
+                    // Tono plano descendente
+                    synth.triggerAttackRelease("G4", "8n", now);
+                    synth.triggerAttackRelease("F4", "8n", now + 0.15);
+                    synth.triggerAttackRelease("D#4", "4n", now + 0.3);
+                } else if (type === 'lose') {
+                    // Tono trágico de derrota
+                    synth.triggerAttackRelease("C4", "8n", now);
+                    synth.triggerAttackRelease("G3", "8n", now + 0.15);
+                    synth.triggerAttackRelease("F3", "4n", now + 0.3);
+                }
+            } catch (error) {
+                console.log("Audio fallido o bloqueado por el navegador:", error);
+            }
+        }
+
+        function toggleSound() {
+            audioEnabled = !audioEnabled;
+            const icon = document.getElementById('sound-icon');
+            const label = document.querySelector('#sound-toggle span');
+            if (audioEnabled) {
+                icon.className = "fa-solid fa-volume-high";
+                label.innerText = "SONIDO: ON";
+                playSound('select');
+            } else {
+                icon.className = "fa-solid fa-volume-xmark";
+                label.innerText = "SONIDO: OFF";
+            }
+        }
+
+        let gameMode = 'pve'; // 'pve' o 'pvp'
+        let pveDifficulty = 'easy'; // 'easy', 'medium', 'hard' (unbeatable minimax)
+        
+        // Selección actual en el selector
+        let selectedP1Id = 'leo';
+        let selectedP2Id = 'shredder';
+
+        // Estado del Tablero
+        let board = Array(9).fill(null); // Contendrá 'X' para P1, 'O' para P2
+        let isGameActive = false;
+        let currentPlayer = 'X'; // X empieza (Jugador 1)
+
+        // Estadísticas de la sesión local (Scoreboard temporal)
+        let p1Wins = 0;
+        let p2Wins = 0;
+        let ties = 0;
+
+        // Historial global en LocalStorage
+        let rankings = {};
+
+        // Inicializar Clasificación
+        function loadRankings() {
+            const stored = localStorage.getItem('tmnt_gato_rankings');
+            if (stored) {
+                rankings = JSON.parse(stored);
+            } else {
+                // Población inicial limpia
+                CHARACTERS.forEach(c => {
+                    rankings[c.id] = 0;
+                });
+                saveRankings();
+            }
+        }
+
+        function saveRankings() {
+            localStorage.setItem('tmnt_gato_rankings', JSON.stringify(rankings));
+        }
+
+        function addWinToRank(characterId) {
+            if (!rankings[characterId]) rankings[characterId] = 0;
+            rankings[characterId]++;
+            saveRankings();
+            renderLeaderboard();
+        }
+
+        // Renderizar el grid de personajes para selección
+        function renderCharacterSelector() {
+            const grid = document.getElementById('character-grid');
+            grid.innerHTML = '';
+
+            CHARACTERS.forEach(char => {
+                const isP1 = selectedP1Id === char.id;
+                const isP2 = selectedP2Id === char.id;
+                
+                let selectStatusBorder = 'border-slate-800';
+                let indicatorBg = 'hidden';
+                let indicatorText = '';
+
+                if (isP1) {
+                    selectStatusBorder = 'border-blue-500 scale-[1.03] shadow-md';
+                    indicatorBg = 'bg-blue-600 block text-xs';
+                    indicatorText = 'P1 (X)';
+                } else if (isP2) {
+                    selectStatusBorder = 'border-red-500 scale-[1.03] shadow-md';
+                    indicatorBg = 'bg-red-600 block text-xs';
+                    indicatorText = gameMode === 'pve' ? 'CPU (O)' : 'P2 (O)';
+                }
+
+                const cardHtml = `
+                    <div onclick="characterCardClicked('${char.id}')" class="bg-slate-950 p-4 rounded-2xl border-4 ${selectStatusBorder} cursor-pointer hover:border-green-400 transition-all duration-200 flex flex-col items-center text-center relative group">
+                        <!-- Indicador de Selección -->
+                        <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 px-2.5 py-0.5 rounded-full ${indicatorBg} font-comic text-white tracking-widest uppercase shadow">
+                            ${indicatorText}
+                        </div>
+                        
+                        <!-- Avatar circular -->
+                        <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-slate-900 border-2 border-slate-800 p-1 mb-3 group-hover:scale-105 transition-transform duration-200">
+                            ${char.avatarSvg}
+                        </div>
+
+                        <!-- Info -->
+                        <h4 class="font-comic text-lg sm:text-xl tracking-wider text-white">${char.name}</h4>
+                        <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mt-0.5 mb-2">${char.weapon}</span>
+                        
+                        <!-- Frase -->
+                        <p class="text-xs italic text-gray-500 mt-auto border-t border-slate-900 pt-1.5 w-full">"${char.quote}"</p>
+                    </div>
+                `;
+                grid.insertAdjacentHTML('beforeend', cardHtml);
+            });
+
+            // Actualizar vistas previas del fondo
+            const p1 = CHARACTERS.find(c => c.id === selectedP1Id);
+            const p2 = CHARACTERS.find(c => c.id === selectedP2Id);
+
+            document.getElementById('p1-preview-name').innerText = p1.name;
+            document.getElementById('p1-preview-name').style.color = p1.color;
+            document.getElementById('p1-preview-color').style.backgroundColor = p1.color;
+
+            document.getElementById('p2-preview-name').innerText = p2.name;
+            document.getElementById('p2-preview-name').style.color = p2.color;
+            document.getElementById('p2-preview-color').style.backgroundColor = p2.color;
+            
+            const p2Title = document.getElementById('p2-preview-title');
+            if (gameMode === 'pve') {
+                p2Title.innerText = 'CPU (O)';
+                p2Title.className = 'text-xs text-red-400 font-bold uppercase tracking-wider';
+            } else {
+                p2Title.innerText = 'JUGADOR 2 (O)';
+                p2Title.className = 'text-xs text-purple-400 font-bold uppercase tracking-wider';
+            }
+        }
+
+        // Manejo de clicks en tarjetas de personaje
+        function characterCardClicked(id) {
+            playSound('select');
+            
+            // Si estamos en modo PvE (Jugador vs CPU)
+            if (gameMode === 'pve') {
+                if (id === selectedP1Id) return; // Ya es P1
+                // P1 selecciona el nuevo personaje, y CPU escoge automáticamente otro aleatorio o Shredder si se deselecciona.
+                selectedP1Id = id;
+                if (selectedP2Id === id) {
+                    // Evitar duplicados
+                    selectedP2Id = CHARACTERS.find(c => c.id !== id && c.isVillain).id;
+                }
+            } else {
+                // Modo PvP: Alterna selección entre P1 y P2.
+                // El primer clic en un personaje disponible lo hace P1. Si ya tiene P1, el siguiente es P2.
+                if (selectedP1Id === id) {
+                    // Deseleccionar P1 no es posible directamente para evitar nulos, pero podemos cambiar
+                    return;
+                }
+                if (selectedP2Id === id) {
+                    return;
+                }
+                
+                // Rotación inteligente
+                // Movemos el antiguo P1 a P2, y el nuevo es P1
+                selectedP2Id = selectedP1Id;
+                selectedP1Id = id;
+            }
+            
+            renderCharacterSelector();
+        }
+
+        // Configuración de modo de juego
+        function selectGameMode(mode) {
+            playSound('select');
+            gameMode = mode;
+            
+            const btnPve = document.getElementById('btn-mode-pve');
+            const btnPvp = document.getElementById('btn-mode-pvp');
+            const diffSelector = document.getElementById('difficulty-selector');
+            const modeIndicator = document.getElementById('game-mode-indicator');
+
+            if (mode === 'pve') {
+                btnPve.className = "px-4 py-2 rounded-xl font-comic text-md border-2 bg-purple-600 border-purple-400 text-white transition-all transform hover:scale-105 shadow-md";
+                btnPvp.className = "px-4 py-2 rounded-xl font-comic text-md border-2 bg-slate-800 border-slate-700 text-gray-400 transition-all transform hover:scale-105";
+                diffSelector.classList.remove('hidden');
+                modeIndicator.innerText = "JUGADOR VS CPU";
+                // Asegurar que CPU sea preferiblemente un villano por temática
+                if (selectedP1Id === selectedP2Id) {
+                    selectedP2Id = 'shredder';
+                }
+            } else {
+                btnPvp.className = "px-4 py-2 rounded-xl font-comic text-md border-2 bg-purple-600 border-purple-400 text-white transition-all transform hover:scale-105 shadow-md";
+                btnPve.className = "px-4 py-2 rounded-xl font-comic text-md border-2 bg-slate-800 border-slate-700 text-gray-400 transition-all transform hover:scale-105";
+                diffSelector.classList.add('hidden');
+                modeIndicator.innerText = "JUGADOR VS JUGADOR";
+            }
+
+            renderCharacterSelector();
+        }
+
+        // Selección de dificultad
+        function setDifficulty(diff) {
+            playSound('select');
+            pveDifficulty = diff;
+            
+            const btnEasy = document.getElementById('diff-easy');
+            const btnMedium = document.getElementById('diff-medium');
+            const btnHard = document.getElementById('diff-hard');
+
+            // Reset classes
+            [btnEasy, btnMedium, btnHard].forEach(b => {
+                b.className = "px-2.5 py-1 text-xs rounded font-bold transition-all text-gray-400 hover:text-white";
+            });
+
+            if (diff === 'easy') {
+                btnEasy.className = "px-2.5 py-1 text-xs rounded font-bold transition-all bg-green-600 text-white";
+            } else if (diff === 'medium') {
+                btnMedium.className = "px-2.5 py-1 text-xs rounded font-bold transition-all bg-yellow-600 text-white";
+            } else {
+                btnHard.className = "px-2.5 py-1 text-xs rounded font-bold transition-all bg-red-600 text-white";
+            }
+        }
+
+        function renderLeaderboard() {
+            const container = document.getElementById('leaderboard-container');
+            container.innerHTML = '';
+
+            // Ordenar personajes por puntaje de victorias
+            const sorted = [...CHARACTERS].sort((a, b) => {
+                return (rankings[b.id] || 0) - (rankings[a.id] || 0);
+            });
+
+            sorted.forEach((char, index) => {
+                const wins = rankings[char.id] || 0;
+                let medalColor = "text-gray-500";
+                if (index === 0) medalColor = "text-yellow-400";
+                else if (index === 1) medalColor = "text-slate-300";
+                else if (index === 2) medalColor = "text-amber-600";
+
+                const rankHtml = `
+                    <div class="bg-slate-950 p-3 rounded-2xl border-2 border-slate-800 flex flex-col items-center text-center relative">
+                        <span class="absolute top-1.5 left-2 font-comic text-sm ${medalColor}">#${index + 1}</span>
+                        
+                        <div class="w-10 h-10 rounded-full p-0.5 bg-slate-900 border border-slate-700 mt-2">
+                            ${char.avatarSvg}
+                        </div>
+                        
+                        <h5 class="font-comic text-xs text-white tracking-wide mt-2 truncate w-full">${char.name}</h5>
+                        <div class="flex items-center gap-1.5 mt-1 bg-slate-900 px-3 py-0.5 rounded-full border border-slate-800">
+                            <i class="fa-solid fa-crown text-[10px] text-yellow-500"></i>
+                            <span class="font-comic text-sm text-green-400">${wins}</span>
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', rankHtml);
+            });
+        }
+
+        function resetGlobalLeaderboard() {
+            if (confirm("¿Seguro de que deseas restablecer el historial de victorias en la alcantarilla?")) {
+                playSound('tie');
+                CHARACTERS.forEach(c => {
+                    rankings[c.id] = 0;
+                });
+                saveRankings();
+                renderLeaderboard();
+            }
+        }
+
+        function startGame() {
+            playSound('select');
+            
+            // Cambiar de pantalla
+            document.getElementById('screen-character-select').classList.add('hidden');
+            document.getElementById('screen-game').classList.remove('hidden');
+
+            // Resetear marcador de esta partida
+            p1Wins = 0;
+            p2Wins = 0;
+            ties = 0;
+
+            updateScoreboardUI();
+            resetBoard();
+        }
+
+        function goToCharacterSelect() {
+            playSound('select');
+            document.getElementById('screen-character-select').classList.remove('hidden');
+            document.getElementById('screen-game').classList.add('hidden');
+            renderCharacterSelector();
+        }
+
+        function goToCharacterSelectFromModal() {
+            document.getElementById('modal-gameover').classList.add('hidden');
+            goToCharacterSelect();
+        }
+
+        function updateScoreboardUI() {
+            const p1 = CHARACTERS.find(c => c.id === selectedP1Id);
+            const p2 = CHARACTERS.find(c => c.id === selectedP2Id);
+
+            // Marcadores nombres
+            document.getElementById('p1-score-name').innerText = p1.name;
+            document.getElementById('p2-score-name').innerText = p2.name;
+
+            // Etiquetas P1 / P2 / CPU
+            document.getElementById('p2-score-label').innerText = gameMode === 'pve' ? 'CPU' : 'Jugador 2';
+
+            // Colores e iconos de los avatares en la barra de scores
+            const avP1 = document.getElementById('p1-score-avatar');
+            const avP2 = document.getElementById('p2-score-avatar');
+
+            avP1.innerHTML = p1.avatarSvg;
+            avP2.innerHTML = p2.avatarSvg;
+
+            avP1.style.backgroundColor = p1.color;
+            avP2.style.backgroundColor = p2.color;
+
+            // Totales numéricos
+            document.getElementById('p1-wins').innerText = p1Wins;
+            document.getElementById('p2-wins').innerText = p2Wins;
+            document.getElementById('tie-wins').innerText = ties;
+        }
+
+        // Resetear solo el tablero para otra ronda de los mismos personajes
+        function resetBoard() {
+            board = Array(9).fill(null);
+            isGameActive = true;
+            currentPlayer = 'X'; // Empieza P1
+
+            // Limpiar casillas físicamente
+            for (let i = 0; i < 9; i++) {
+                const cell = document.getElementById(`cell-${i}`);
+                cell.innerHTML = '';
+                cell.className = "bg-slate-900 hover:bg-slate-800/80 rounded-xl border border-slate-800 text-white font-bold flex items-center justify-center transition-all transform hover:scale-[1.02] active:scale-95 aspect-square relative focus:outline-none";
+            }
+
+            updateTurnAnnouncer();
+        }
+
+        function resetCurrentGame() {
+            playSound('select');
+            resetBoard();
+        }
+
+        function updateTurnAnnouncer() {
+            const announcer = document.getElementById('turn-announcer');
+            const colorIndicator = document.getElementById('current-player-indicator-color');
+            const p1 = CHARACTERS.find(c => c.id === selectedP1Id);
+            const p2 = CHARACTERS.find(c => c.id === selectedP2Id);
+
+            if (currentPlayer === 'X') {
+                announcer.innerText = `TURNO DE ${p1.name}`;
+                announcer.style.color = p1.color;
+                colorIndicator.style.backgroundColor = p1.color;
+            } else {
+                announcer.innerText = gameMode === 'pve' ? 'PENSAMIENTO DE CPU...' : `TURNO DE ${p2.name}`;
+                announcer.style.color = p2.color;
+                colorIndicator.style.backgroundColor = p2.color;
+            }
+        }
+
+        function cellClicked(index) {
+            if (!isGameActive || board[index] !== null) return;
+            
+            // Si es el turno de la CPU en PVE, bloquear clics
+            if (gameMode === 'pve' && currentPlayer === 'O') return;
+
+            makeMove(index);
+        }
+
+        function makeMove(index) {
+            board[index] = currentPlayer;
+            const cell = document.getElementById(`cell-${index}`);
+            
+            const p1 = CHARACTERS.find(c => c.id === selectedP1Id);
+            const p2 = CHARACTERS.find(c => c.id === selectedP2Id);
+            const activeChar = currentPlayer === 'X' ? p1 : p2;
+
+            // Inyectar el símbolo gráfico personalizado del personaje dentro de la celda
+            cell.innerHTML = `
+                <div class="w-full h-full p-2.5 flex items-center justify-center slash-animation">
+                    ${activeChar.avatarSvg}
+                </div>
+            `;
+            
+            // Añadir borde brillante según el personaje
+            cell.classList.remove('bg-slate-900');
+            cell.style.backgroundColor = '#0b0f19';
+            cell.style.borderColor = activeChar.color;
+            cell.style.boxShadow = `inset 0 0 8px ${activeChar.glowColor}, 0 0 12px ${activeChar.glowColor}`;
+
+            // Play random hit sound
+            playSound(currentPlayer === 'X' ? 'hit1' : 'hit2');
+
+            // Verificar ganador
+            if (checkWin(currentPlayer)) {
+                endGame(currentPlayer);
+                return;
+            }
+
+            if (checkTie()) {
+                endGame('TIE');
+                return;
+            }
+
+            // Cambiar turno
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            updateTurnAnnouncer();
+
+            // Si es turno de CPU
+            if (gameMode === 'pve' && currentPlayer === 'O' && isGameActive) {
+                setTimeout(playCpuTurn, 650); // Un pequeño retraso para simular "pensamiento" ninja
+            }
+        }
+
+        // Combinaciones ganadoras
+        const WIN_COMBOS = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8], // Horizontales
+            [0, 3, 6], [1, 4, 7], [2, 5, 8], // Verticales
+            [0, 4, 8], [2, 4, 6]             // Diagonales
+        ];
+
+        function checkWin(player) {
+            return WIN_COMBOS.some(combo => {
+                return combo.every(idx => board[idx] === player);
+            });
+        }
+
+        function checkTie() {
+            return board.every(cell => cell !== null);
+        }
+
+        function playCpuTurn() {
+            if (!isGameActive) return;
+
+            let targetIndex;
+
+            if (pveDifficulty === 'easy') {
+                targetIndex = getRandomMove();
+            } else if (pveDifficulty === 'medium') {
+                // 50% de probabilidad de jugar perfecto, 50% aleatorio
+                if (Math.random() < 0.5) {
+                    targetIndex = getBestMove();
+                } else {
+                    targetIndex = getRandomMove();
+                }
+            } else {
+                // Imbatible: Algoritmo minimax puro
+                targetIndex = getBestMove();
+            }
+
+            if (targetIndex !== undefined && targetIndex !== -1) {
+                makeMove(targetIndex);
+            }
+        }
+
+        function getRandomMove() {
+            const available = [];
+            board.forEach((cell, idx) => {
+                if (cell === null) available.push(idx);
+            });
+            if (available.length === 0) return -1;
+            return available[Math.floor(Math.random() * available.length)];
+        }
+
+        // Obtener el mejor movimiento con Minimax
+        function getBestMove() {
+            let bestVal = -Infinity;
+            let bestMove = -1;
+
+            for (let i = 0; i < 9; i++) {
+                if (board[i] === null) {
+                    board[i] = 'O'; // Movimiento de la CPU
+                    let moveVal = minimax(board, 0, false);
+                    board[i] = null; // Deshacer
+
+                    if (moveVal > bestVal) {
+                        bestVal = moveVal;
+                        bestMove = i;
+                    }
+                }
+            }
+            return bestMove;
+        }
+
+        function minimax(tempBoard, depth, isMax) {
+            // Evaluamos la hoja del árbol lógico
+            if (checkWin('O')) return 10 - depth;
+            if (checkWin('X')) return depth - 10;
+            if (tempBoard.every(c => c !== null)) return 0;
+
+            if (isMax) {
+                let best = -Infinity;
+                for (let i = 0; i < 9; i++) {
+                    if (tempBoard[i] === null) {
+                        tempBoard[i] = 'O';
+                        best = Math.max(best, minimax(tempBoard, depth + 1, false));
+                        tempBoard[i] = null;
+                    }
+                }
+                return best;
+            } else {
+                let best = Infinity;
+                for (let i = 0; i < 9; i++) {
+                    if (tempBoard[i] === null) {
+                        tempBoard[i] = 'X';
+                        best = Math.min(best, minimax(tempBoard, depth + 1, true));
+                        tempBoard[i] = null;
+                    }
+                }
+                return best;
+            }
+        }
+
+        function endGame(winner) {
+            isGameActive = false;
+            
+            const p1 = CHARACTERS.find(c => c.id === selectedP1Id);
+            const p2 = CHARACTERS.find(c => c.id === selectedP2Id);
+
+            const modal = document.getElementById('modal-gameover');
+            const title = document.getElementById('gameover-title');
+            const subtitle = document.getElementById('gameover-subtitle');
+            const avatarContainer = document.getElementById('gameover-avatar-container');
+            const winnerName = document.getElementById('gameover-winner-name');
+            const msg = document.getElementById('gameover-msg');
+            const banner = document.getElementById('winner-banner-bg');
+
+            if (winner === 'TIE') {
+                ties++;
+                playSound('tie');
+                
+                title.innerText = "¡EMPATE TÁCTICO!";
+                subtitle.innerText = "Nadie cede terreno en las alcantarillas";
+                winnerName.innerText = "¡TREGUA!";
+                msg.innerText = "Ambos combatientes han demostrado un nivel de entrenamiento de nivel maestro. ¡Nadie se queda con la pizza esta vez!";
+                
+                // Mostrar un icono de pizza / YinYang para el empate
+                avatarContainer.innerHTML = `<i class="fa-solid fa-yin-yang text-4xl text-yellow-400"></i>`;
+                avatarContainer.style.backgroundColor = '#1e293b';
+                avatarContainer.style.borderColor = '#94a3b8';
+                
+                banner.className = "-mx-6 -mt-6 p-4 border-b-4 border-slate-500 mb-6 flex flex-col items-center bg-slate-800";
+            } else {
+                const winnerChar = winner === 'X' ? p1 : p2;
+                
+                // Sumar victorias locales
+                if (winner === 'X') p1Wins++;
+                else p2Wins++;
+
+                // Sumar victorias globales de clasificación
+                addWinToRank(winnerChar.id);
+
+                // Play win/lose sounds based on human perspective
+                if (gameMode === 'pve') {
+                    if (winner === 'X') {
+                        playSound('win');
+                    } else {
+                        playSound('lose');
+                    }
+                } else {
+                    playSound('win'); // En local siempre gana alguien
+                }
+
+                title.innerText = "¡VICTORIA TOTAL!";
+                subtitle.innerText = `Dominio absoluto con ${winnerChar.weapon}`;
+                winnerName.innerText = winnerChar.name;
+                winnerName.style.color = winnerChar.color;
+                msg.innerText = `"${winnerChar.quote}" - Un combate legendario resuelto con perfecta estrategia mutante.`;
+                
+                // Poner el avatar del ganador
+                avatarContainer.innerHTML = winnerChar.avatarSvg;
+                avatarContainer.style.backgroundColor = winnerChar.color;
+                avatarContainer.style.borderColor = '#ffffff';
+
+                // Modificar fondo de banner para acoplarse al ganador
+                banner.className = `-mx-6 -mt-6 p-4 border-b-4 ${winnerChar.borderColor} mb-6 flex flex-col items-center ${winnerChar.accentColor}`;
+            }
+
+            updateScoreboardUI();
+
+            // Mostrar el modal con retardo sutil
+            setTimeout(() => {
+                modal.classList.remove('hidden');
+            }, 800);
+        }
+
+        function restartMatch() {
+            document.getElementById('modal-gameover').classList.add('hidden');
+            resetBoard();
+        }
+
+        window.onload = function() {
+            loadRankings();
+            renderCharacterSelector();
+            renderLeaderboard();
+        };
+    </script>
+</body>
+</html>
